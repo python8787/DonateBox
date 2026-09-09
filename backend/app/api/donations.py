@@ -69,10 +69,13 @@ async def create_donation(
     try:
         donation = await DonationService.create_donation(db, request)
         return DonationResponse(
-            donation_id=donation.id,
+            id=donation.id,
             status=donation.status,
             amount=float(donation.amount),
             currency=donation.currency,
+            name=donation.donor_name,
+            terms_version=donation.terms_version,
+            created_at=donation.created_at.isoformat(),
         )
     except ValueError as e:
         raise HTTPException(

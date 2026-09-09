@@ -4,6 +4,7 @@ DonateBox - Database Connection
 Async PostgreSQL connection via SQLAlchemy.
 """
 
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 
@@ -48,7 +49,13 @@ async def check_db_connection() -> bool:
     """Check if database is reachable."""
     try:
         async with async_session() as session:
-            await session.execute("SELECT 1")
+            await session.execute(text("SELECT 1"))
             return True
     except Exception:
         return False
+
+
+async def create_tables():
+    """Create all tables (dev convenience — use Alembic in production)."""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)

@@ -5,6 +5,7 @@ Main application setup with CORS, rate limiting, and route registration.
 """
 
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -15,6 +16,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from app.config import settings
+from app.database import create_tables
 from app.api import health, donations, payments, webhooks, admin
 
 # Configure logging
@@ -31,6 +33,15 @@ async def lifespan(app: FastAPI):
     logger.info(f"Starting {settings.app_name} v{settings.app_version}")
     logger.info(f"Environment: {settings.app_env}")
     logger.info(f"Debug: {settings.debug}")
+
+    # Auto-create tables in development (use Alembic in production)
+    if settings.is_development:
+        try:
+            await create_tables()
+            logger.info("Database tables created/verified")
+        except Exception as e:
+            logger.warning(f"Could not create tables (DB may be unavailable): {e}")
+
     yield
     logger.info(f"Shutting down {settings.app_name}")
 
@@ -61,8 +72,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Static files for admin dashboard
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Static files for admin dashboard (only if directory exists)
+static_dir = os.path.join(os.path.dirname(__file__), "..", "static")
+if os.path.isdir(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 # Register API routes
 app.include_router(health.router, prefix="/api/v1")

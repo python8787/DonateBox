@@ -20,7 +20,7 @@ from app.schemas.payment import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/payments", tags=["Payments"])
+router = APIRouter(tags=["Payments"])
 
 
 @router.post(
@@ -37,7 +37,6 @@ async def create_payment(
     Routes to the correct payment gateway based on the donation's currency.
     Fully implemented in Phase 4.
     """
-    # Stub — will be implemented in Phase 4
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
         detail="Payment integration coming in Phase 4",
@@ -45,7 +44,7 @@ async def create_payment(
 
 
 @router.post(
-    "/verify",
+    "/payments/verify",
     response_model=PaymentVerifyResponse,
 )
 async def verify_payment(

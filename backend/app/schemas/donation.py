@@ -19,7 +19,7 @@ class CurrencyConfig(BaseModel):
 
 
 class DonationConfigResponse(BaseModel):
-    """Response for GET /api/v1/donation/config"""
+    """Response for GET /api/v1/donations/config"""
     currencies: dict[str, CurrencyConfig]
     terms_version: str
     recipient_name: str
@@ -67,10 +67,13 @@ class CreateDonationRequest(BaseModel):
 
 class DonationResponse(BaseModel):
     """Response after creating a donation."""
-    donation_id: UUID
+    id: UUID
     status: str
     amount: float
     currency: str
+    name: Optional[str] = None
+    terms_version: str
+    created_at: str
     message: str = "Donation created successfully"
 
     model_config = {"from_attributes": True}

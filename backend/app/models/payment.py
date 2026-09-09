@@ -10,9 +10,8 @@ from datetime import datetime, timezone
 
 from sqlalchemy import (
     Column, String, Numeric, DateTime, Text, ForeignKey,
-    UniqueConstraint, Index
+    UniqueConstraint, Index, Uuid
 )
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -22,12 +21,12 @@ class Payment(Base):
     __tablename__ = "payments"
 
     id = Column(
-        UUID(as_uuid=True),
+        Uuid,
         primary_key=True,
         default=uuid.uuid4,
     )
     donation_id = Column(
-        UUID(as_uuid=True),
+        Uuid,
         ForeignKey("donations.id"),
         nullable=False,
     )

@@ -19,8 +19,8 @@ class Settings(BaseSettings):
     app_version: str = Field(default="1.0.0")
     debug: bool = Field(default=False)
 
-    # Database
-    database_url: str = Field(default="postgresql+asyncpg://postgres:postgres@localhost:5432/donatebox")
+    # Database (SQLite default for easy local dev; use PostgreSQL in production)
+    database_url: str = Field(default="sqlite+aiosqlite:///./donatebox.db")
 
     # Razorpay (INR)
     razorpay_key_id: str = Field(default="")

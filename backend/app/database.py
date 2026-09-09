@@ -1,23 +1,37 @@
 """
 DonateBox - Database Connection
 
-Async PostgreSQL connection via SQLAlchemy.
+Async database connection via SQLAlchemy.
+Supports PostgreSQL (production) and SQLite (local dev).
 """
 
-from sqlalchemy import text
+from sqlalchemy import text, event
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 
 from app.config import settings
 
-# Create async engine
-engine = create_async_engine(
-    settings.database_url,
-    echo=settings.is_development,
-    pool_pre_ping=True,
-    pool_size=5,
-    max_overflow=10,
-)
+# Create async engine — adapt pool settings to the backend
+_is_sqlite = settings.database_url.startswith("sqlite")
+
+engine_kwargs = {
+    "echo": settings.is_development,
+}
+if not _is_sqlite:
+    # PostgreSQL pool tuning (SQLite doesn't support pooling the same way)
+    engine_kwargs.update(pool_pre_ping=True, pool_size=5, max_overflow=10)
+
+engine = create_async_engine(settings.database_url, **engine_kwargs)
+
+# SQLite needs WAL mode and foreign keys enabled per-connection
+if _is_sqlite:
+    @event.listens_for(engine.sync_engine, "connect")
+    def _sqlite_pragmas(dbapi_conn, _rec):
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
 
 # Session factory
 async_session = async_sessionmaker(

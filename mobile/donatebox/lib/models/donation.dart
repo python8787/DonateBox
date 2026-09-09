@@ -49,29 +49,48 @@ class Donation {
   bool get isCancelled => status == 'CANCELLED';
 }
 
-/// Payment initialization response from backend.
+/// Payment initialization data returned by POST /donations/{id}/payment.
+///
+/// Contains provider name, gateway order ID, and the data
+/// Flutter needs to launch the native payment UI.
 class PaymentInitData {
-  final String paymentId;
   final String provider;
-  final Map<String, dynamic> providerData;
+  final String orderId;
+  final Map<String, dynamic> paymentInitData;
 
   PaymentInitData({
-    required this.paymentId,
     required this.provider,
-    required this.providerData,
+    required this.orderId,
+    required this.paymentInitData,
   });
 
   factory PaymentInitData.fromJson(Map<String, dynamic> json) {
     return PaymentInitData(
-      paymentId: json['payment_id'] as String,
       provider: json['provider'] as String,
-      providerData: json['provider_data'] as Map<String, dynamic>? ?? {},
+      orderId: json['order_id'] as String,
+      paymentInitData: json['payment_init_data'] as Map<String, dynamic>? ?? {},
     );
   }
 
-  /// Razorpay order ID
-  String? get razorpayOrderId => providerData['order_id'] as String?;
+  // ── Razorpay helpers ──
 
-  /// Stripe client secret
-  String? get stripeClientSecret => providerData['client_secret'] as String?;
+  /// Razorpay API key (public, safe for Flutter)
+  String? get razorpayKey => paymentInitData['key'] as String?;
+
+  /// Razorpay order ID
+  String? get razorpayOrderId => paymentInitData['order_id'] as String?;
+
+  /// Amount in paise
+  int? get razorpayAmount => paymentInitData['amount'] as int?;
+
+  /// Description shown on Razorpay checkout
+  String? get razorpayDescription => paymentInitData['description'] as String?;
+
+  // ── Stripe helpers ──
+
+  /// Stripe client secret for PaymentSheet
+  String? get stripeClientSecret => paymentInitData['client_secret'] as String?;
+
+  /// Stripe publishable key
+  String? get stripePublishableKey => paymentInitData['publishable_key'] as String?;
 }

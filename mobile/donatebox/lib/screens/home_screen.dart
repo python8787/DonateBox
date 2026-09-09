@@ -5,6 +5,7 @@ import '../config/app_config.dart';
 import '../models/donation_config.dart';
 import '../models/donation.dart';
 import '../services/api_service.dart';
+import '../services/payment_client_service.dart';
 import '../widgets/glassmorphic_card.dart';
 import '../widgets/amount_selector.dart';
 import '../widgets/donation_dialog.dart';
@@ -175,53 +176,73 @@ class _HomeScreenState extends State<HomeScreen> {
         currency: currency,
         termsVersion: _termsVersion,
       );
-
       final donation = Donation.fromJson(donationData);
 
-      // Step 2: Payment gateway (Phase 4 — simulated for now)
-      // In Phase 4, this will call PaymentClientService.launchRazorpay/Stripe
-      await Future.delayed(const Duration(seconds: 2));
+      // Step 2: Create payment order on backend
+      final paymentData = await ApiService.createPayment(
+        donationId: donation.id,
+      );
+      final paymentInit = PaymentInitData.fromJson(paymentData);
 
-      // Simulate success for now
-      if (mounted) {
-        // Remove processing screen and navigate to thank you
-        Navigator.of(context).pushAndRemoveUntil(
-          PageRouteBuilder(
-            pageBuilder: (_, __, ___) => ThankYouScreen(
-              amount: amount,
-              currencySymbol: symbol,
-              currency: currency,
-              donorName: name,
-              donationId: donation.id,
-            ),
-            transitionsBuilder: (_, animation, __, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-            transitionDuration: const Duration(milliseconds: 400),
-          ),
-          (route) => route.isFirst,
+      // Step 3: Launch native payment UI (Razorpay or Stripe)
+      final paymentResult = await PaymentClientService.launchPayment(paymentInit);
+
+      if (paymentResult.success) {
+        // Step 4: Verify payment on backend (NEVER trust client)
+        final verifyResult = await ApiService.verifyPayment(
+          donationId: donation.id,
+          paymentData: paymentResult.data,
         );
+
+        final verified = verifyResult['status'] == 'SUCCESS';
+
+        if (verified && mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            PageRouteBuilder(
+              pageBuilder: (_, __, ___) => ThankYouScreen(
+                amount: amount,
+                currencySymbol: symbol,
+                currency: currency,
+                donorName: name,
+                donationId: donation.id,
+              ),
+              transitionsBuilder: (_, animation, __, child) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+              transitionDuration: const Duration(milliseconds: 400),
+            ),
+            (route) => route.isFirst,
+          );
+        } else if (mounted) {
+          // Server says payment didn't verify
+          _navigateToFailed(
+            amount: amount,
+            symbol: symbol,
+            currency: currency,
+            message: verifyResult['message'] ?? 'Payment verification failed',
+            wasCancelled: false,
+          );
+        }
+      } else {
+        // Payment was cancelled or failed at gateway
+        if (mounted) {
+          _navigateToFailed(
+            amount: amount,
+            symbol: symbol,
+            currency: currency,
+            message: paymentResult.error ?? 'Payment failed',
+            wasCancelled: paymentResult.wasCancelled,
+          );
+        }
       }
     } catch (e) {
-      // Navigate to failed screen
       if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          PageRouteBuilder(
-            pageBuilder: (_, __, ___) => PaymentFailedScreen(
-              amount: amount,
-              currencySymbol: symbol,
-              currency: currency,
-              errorMessage: e.toString().replaceAll('Exception: ', ''),
-              onRetry: () {
-                Navigator.of(context).popUntil((route) => route.isFirst);
-              },
-            ),
-            transitionsBuilder: (_, animation, __, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-            transitionDuration: const Duration(milliseconds: 300),
-          ),
-          (route) => route.isFirst,
+        _navigateToFailed(
+          amount: amount,
+          symbol: symbol,
+          currency: currency,
+          message: e.toString().replaceAll('Exception: ', ''),
+          wasCancelled: false,
         );
       }
     } finally {
@@ -229,6 +250,34 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  void _navigateToFailed({
+    required double amount,
+    required String symbol,
+    required String currency,
+    required String message,
+    required bool wasCancelled,
+  }) {
+    Navigator.of(context).pushAndRemoveUntil(
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => PaymentFailedScreen(
+          amount: amount,
+          currencySymbol: symbol,
+          currency: currency,
+          errorMessage: message,
+          wasCancelled: wasCancelled,
+          onRetry: () {
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          },
+        ),
+        transitionsBuilder: (_, animation, __, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+      (route) => route.isFirst,
+    );
   }
 
   void _showSnackBar(String message, {bool isError = false}) {

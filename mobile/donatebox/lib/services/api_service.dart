@@ -65,7 +65,8 @@ class ApiService {
     }
   }
 
-  /// Create a payment order for a donation (Phase 4).
+  /// Create a payment order for a donation.
+  /// Returns provider info + data to launch payment UI.
   static Future<Map<String, dynamic>> createPayment({
     required String donationId,
   }) async {
@@ -79,19 +80,18 @@ class ApiService {
     }
   }
 
-  /// Verify a payment after gateway callback (Phase 4).
+  /// Verify a payment after the user completes it.
+  /// The backend checks with the gateway — never trust the client.
   static Future<Map<String, dynamic>> verifyPayment({
-    required String paymentId,
-    required String provider,
-    required Map<String, dynamic> providerData,
+    required String donationId,
+    required Map<String, dynamic> paymentData,
   }) async {
     try {
       final response = await dio.post(
         '/payments/verify',
         data: {
-          'payment_id': paymentId,
-          'provider': provider,
-          'provider_data': providerData,
+          'donation_id': donationId,
+          'payment_data': paymentData,
         },
       );
       return response.data as Map<String, dynamic>;

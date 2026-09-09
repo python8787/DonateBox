@@ -336,6 +336,21 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+/// Simple data holder for currency presets.
+class _CurrencyPreset {
+  final String symbol;
+  final List<int> presets;
+  final double min;
+  final double max;
+
+  const _CurrencyPreset({
+    required this.symbol,
+    required this.presets,
+    required this.min,
+    required this.max,
+  });
+}
+
 
 /// Currency toggle widget
 class _CurrencyToggle extends StatelessWidget {

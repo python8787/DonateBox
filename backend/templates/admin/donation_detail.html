@@ -1,0 +1,126 @@
+{% extends "admin/base.html" %}
+{% block title %}Donation {{ donation.id | string | truncate(8, True, '') }} - DonateBox Admin{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:1.5rem;">
+    <a href="/admin/donations" style="font-size:0.875rem;color:var(--text-dim);">&larr; Back to Donations</a>
+</div>
+
+<h1 class="page-title">
+    Donation Details
+    <span class="badge badge-{{ donation.status | lower }}" style="font-size:0.8rem;vertical-align:middle;margin-left:0.5rem;">
+        {{ donation.status }}
+    </span>
+</h1>
+
+<div class="detail-grid">
+    <!-- Donation Info -->
+    <div class="card">
+        <h3 style="font-size:0.95rem;font-weight:600;margin-bottom:1rem;color:var(--text-dim);">Donation Info</h3>
+
+        <div class="detail-row">
+            <span class="detail-label">ID</span>
+            <span class="detail-value" style="font-family:monospace;font-size:0.8rem;">{{ donation.id }}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Donor</span>
+            <span class="detail-value">{{ donation.donor_name or "Anonymous" }}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Amount</span>
+            <span class="detail-value">
+                {% if donation.currency == 'INR' %}&#8377;{% else %}${% endif %}{{ "{:,.2f}".format(donation.amount) }}
+                {{ donation.currency }}
+            </span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Status</span>
+            <span class="detail-value">
+                <span class="badge badge-{{ donation.status | lower }}">{{ donation.status }}</span>
+            </span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Payment Provider</span>
+            <span class="detail-value">{{ donation.payment_provider or "Not assigned" }}</span>
+        </div>
+    </div>
+
+    <!-- Dates & Terms -->
+    <div class="card">
+        <h3 style="font-size:0.95rem;font-weight:600;margin-bottom:1rem;color:var(--text-dim);">Timeline</h3>
+
+        <div class="detail-row">
+            <span class="detail-label">Created</span>
+            <span class="detail-value">{{ donation.created_at.strftime('%d %b %Y, %H:%M:%S') }}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Updated</span>
+            <span class="detail-value">{{ donation.updated_at.strftime('%d %b %Y, %H:%M:%S') }}</span>
+        </div>
+        {% if donation.paid_at %}
+        <div class="detail-row">
+            <span class="detail-label">Paid At</span>
+            <span class="detail-value" style="color:var(--success);">{{ donation.paid_at.strftime('%d %b %Y, %H:%M:%S') }}</span>
+        </div>
+        {% endif %}
+        <div class="detail-row">
+            <span class="detail-label">Terms Version</span>
+            <span class="detail-value">v{{ donation.terms_version }}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Terms Accepted</span>
+            <span class="detail-value">{{ donation.terms_accepted_at.strftime('%d %b %Y, %H:%M:%S') }}</span>
+        </div>
+    </div>
+</div>
+
+<!-- Payment History -->
+<div class="card" style="margin-top:1.5rem;">
+    <h3 style="font-size:0.95rem;font-weight:600;margin-bottom:1rem;color:var(--text-dim);">Payment Attempts</h3>
+
+    {% if payments %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Provider</th>
+                    <th>Order ID</th>
+                    <th>Payment ID</th>
+                    <th>Amount</th>
+                    <th>Method</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in payments %}
+                <tr>
+                    <td>{{ p.provider }}</td>
+                    <td style="font-family:monospace;font-size:0.75rem;color:var(--text-dim);">
+                        {{ p.provider_order_id or "-" }}
+                    </td>
+                    <td style="font-family:monospace;font-size:0.75rem;color:var(--text-dim);">
+                        {{ p.provider_payment_id or "-" }}
+                    </td>
+                    <td>
+                        {% if p.currency == 'INR' %}&#8377;{% else %}${% endif %}{{ "{:,.2f}".format(p.amount) }}
+                    </td>
+                    <td style="color:var(--text-dim);">{{ p.payment_method or "-" }}</td>
+                    <td>
+                        <span class="badge badge-{{ p.status | lower }}">{{ p.status }}</span>
+                    </td>
+                    <td style="color:var(--text-dim);font-size:0.8rem;">
+                        {{ p.created_at.strftime('%d %b %Y, %H:%M') }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty" style="padding:1.5rem;">
+        <p>No payment attempts recorded yet.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

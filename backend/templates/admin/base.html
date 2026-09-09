@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}DonateBox Admin{% endblock %}</title>
+    <style>
+        :root {
+            --bg: #0f1117;
+            --bg-card: #1a1d27;
+            --bg-input: #252836;
+            --border: #2e3245;
+            --text: #e4e6ed;
+            --text-dim: #8b8fa3;
+            --accent: #7c3aed;
+            --accent-hover: #6d28d9;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        /* Navigation */
+        .nav {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 56px;
+        }
+        .nav-brand {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .nav-brand span { color: var(--accent); }
+        .nav-links { display: flex; gap: 0.25rem; }
+        .nav-links a {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            color: var(--text-dim);
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+        .nav-links a:hover, .nav-links a.active {
+            background: var(--bg-input);
+            color: var(--text);
+            text-decoration: none;
+        }
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.875rem;
+            color: var(--text-dim);
+        }
+        .nav-right a { color: var(--text-dim); font-size: 0.875rem; }
+
+        /* Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+        .stat-sub {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-top: 0.25rem;
+        }
+
+        /* Table */
+        .table-wrap {
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+        th {
+            background: var(--bg-input);
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-dim);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+        }
+        td {
+            padding: 0.75rem 1rem;
+            border-top: 1px solid var(--border);
+            white-space: nowrap;
+        }
+        tr:hover td { background: rgba(124, 58, 237, 0.04); }
+
+        /* Status badges */
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .badge-success { background: rgba(34, 197, 94, 0.15); color: var(--success); }
+        .badge-pending { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+        .badge-failed { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+        .badge-created { background: rgba(59, 130, 246, 0.15); color: var(--info); }
+        .badge-cancelled { background: rgba(139, 143, 163, 0.15); color: var(--text-dim); }
+        .badge-expired { background: rgba(139, 143, 163, 0.15); color: var(--text-dim); }
+
+        /* Forms & Filters */
+        .filters {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        select, input[type="text"], input[type="password"] {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            outline: none;
+        }
+        select:focus, input:focus {
+            border-color: var(--accent);
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-outline {
+            background: transparent;
+            color: var(--text-dim);
+            border: 1px solid var(--border);
+        }
+        .btn-outline:hover {
+            border-color: var(--text-dim);
+            color: var(--text);
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+            font-size: 0.875rem;
+            color: var(--text-dim);
+        }
+        .pagination a {
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            font-size: 0.8rem;
+        }
+        .pagination a:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        /* Detail page */
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .detail-label { color: var(--text-dim); font-size: 0.875rem; }
+        .detail-value { font-weight: 500; font-size: 0.875rem; }
+
+        /* Empty state */
+        .empty {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-dim);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .detail-grid { grid-template-columns: 1fr; }
+            .nav { padding: 0 1rem; }
+        }
+    </style>
+</head>
+<body>
+    {% block nav %}
+    <nav class="nav">
+        <div class="nav-brand">
+            <span>&#9830;</span> DonateBox <span style="font-weight:400;font-size:0.8rem;color:var(--text-dim);margin-left:0.5rem;">Admin</span>
+        </div>
+        <div class="nav-links">
+            <a href="/admin" class="{% if request.url.path == '/admin' %}active{% endif %}">Dashboard</a>
+            <a href="/admin/donations" class="{% if '/admin/donations' in request.url.path %}active{% endif %}">Donations</a>
+        </div>
+        <div class="nav-right">
+            {{ admin }} &middot; <a href="/admin/logout">Logout</a>
+        </div>
+    </nav>
+    {% endblock %}
+
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

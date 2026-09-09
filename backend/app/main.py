@@ -82,7 +82,9 @@ app.include_router(health.router, prefix="/api/v1")
 app.include_router(donations.router, prefix="/api/v1")
 app.include_router(payments.router, prefix="/api/v1")
 app.include_router(webhooks.router, prefix="/api/v1")
-app.include_router(admin.router, prefix="/api/v1")
+
+# Admin dashboard — mounted at root (serves /admin/* HTML pages + /api/v1/admin/* JSON)
+app.include_router(admin.router)
 
 
 @app.get("/")

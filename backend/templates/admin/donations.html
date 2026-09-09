@@ -1,0 +1,94 @@
+{% extends "admin/base.html" %}
+{% block title %}Donations - DonateBox Admin{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Donations <span style="color:var(--text-dim);font-weight:400;font-size:1rem;">({{ total }})</span></h1>
+
+<!-- Filters -->
+<form method="GET" action="/admin/donations" class="filters">
+    <select name="status_filter">
+        <option value="">All Statuses</option>
+        {% for s in ['CREATED', 'PENDING', 'SUCCESS', 'FAILED', 'CANCELLED', 'EXPIRED'] %}
+        <option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+    </select>
+
+    <select name="currency">
+        <option value="">All Currencies</option>
+        <option value="INR" {% if currency == 'INR' %}selected{% endif %}>INR</option>
+        <option value="USD" {% if currency == 'USD' %}selected{% endif %}>USD</option>
+    </select>
+
+    <button type="submit" class="btn btn-primary">Filter</button>
+    {% if status_filter or currency %}
+    <a href="/admin/donations" class="btn btn-outline">Clear</a>
+    {% endif %}
+</form>
+
+<!-- Donations Table -->
+{% if donations %}
+<div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Donor</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Provider</th>
+                <th>Date</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in donations %}
+            <tr>
+                <td style="font-family:monospace;font-size:0.75rem;color:var(--text-dim);">
+                    {{ d.id | string | truncate(8, True, '') }}
+                </td>
+                <td>{{ d.donor_name or "Anonymous" }}</td>
+                <td>
+                    {% if d.currency == 'INR' %}&#8377;{% else %}${% endif %}{{ "{:,.2f}".format(d.amount) }}
+                    <span style="color:var(--text-dim);font-size:0.75rem;">{{ d.currency }}</span>
+                </td>
+                <td>
+                    <span class="badge badge-{{ d.status | lower }}">{{ d.status }}</span>
+                </td>
+                <td style="color:var(--text-dim);font-size:0.8rem;">
+                    {{ d.payment_provider or "-" }}
+                </td>
+                <td style="color:var(--text-dim);font-size:0.8rem;">
+                    {{ d.created_at.strftime('%d %b %Y, %H:%M') }}
+                </td>
+                <td>
+                    <a href="/admin/donations/{{ d.id }}" style="font-size:0.8rem;">Details</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+<div class="pagination">
+    <span>Page {{ page }} of {{ total_pages }}</span>
+    <div style="display:flex;gap:0.5rem;">
+        {% if page > 1 %}
+        <a href="/admin/donations?page={{ page - 1 }}{% if status_filter %}&status_filter={{ status_filter }}{% endif %}{% if currency %}&currency={{ currency }}{% endif %}">
+            &larr; Previous
+        </a>
+        {% endif %}
+        {% if page < total_pages %}
+        <a href="/admin/donations?page={{ page + 1 }}{% if status_filter %}&status_filter={{ status_filter }}{% endif %}{% if currency %}&currency={{ currency }}{% endif %}">
+            Next &rarr;
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+{% else %}
+<div class="card empty">
+    <p>No donations found{% if status_filter or currency %} matching your filters{% endif %}.</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends "admin/base.html" %}
+{% block title %}Dashboard - DonateBox Admin{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Dashboard</h1>
+
+<!-- Stats Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Total Raised</div>
+        <div class="stat-value" style="color: var(--success);">
+            {% if stats.by_currency.get('INR') %}
+                &#8377;{{ "{:,.0f}".format(stats.by_currency['INR']['amount']) }}
+            {% else %}
+                &#8377;0
+            {% endif %}
+        </div>
+        {% if stats.by_currency.get('USD') %}
+        <div class="stat-sub">${{ "{:,.2f}".format(stats.by_currency['USD']['amount']) }} USD</div>
+        {% endif %}
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-label">Successful Donations</div>
+        <div class="stat-value">{{ stats.success_count }}</div>
+        <div class="stat-sub">{{ stats.success_rate }}% success rate</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-label">Pending</div>
+        <div class="stat-value" style="color: var(--warning);">{{ stats.pending_count }}</div>
+        <div class="stat-sub">Awaiting payment</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-label">Total Attempts</div>
+        <div class="stat-value">{{ stats.total_count }}</div>
+        <div class="stat-sub">
+            {{ stats.failed_count }} failed &middot;
+            {{ stats.created_count }} created
+        </div>
+    </div>
+</div>
+
+<!-- Recent Donations -->
+<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+        <h2 style="font-size:1.1rem;font-weight:600;">Recent Donations</h2>
+        <a href="/admin/donations" class="btn btn-outline">View All</a>
+    </div>
+
+    {% if stats.recent %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Donor</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in stats.recent %}
+                <tr>
+                    <td>{{ d.donor_name or "Anonymous" }}</td>
+                    <td>
+                        {% if d.currency == 'INR' %}&#8377;{% else %}${% endif %}{{ "{:,.2f}".format(d.amount) }}
+                        <span style="color:var(--text-dim);font-size:0.75rem;">{{ d.currency }}</span>
+                    </td>
+                    <td>
+                        <span class="badge badge-{{ d.status | lower }}">{{ d.status }}</span>
+                    </td>
+                    <td style="color:var(--text-dim);font-size:0.8rem;">
+                        {{ d.created_at.strftime('%d %b %Y, %H:%M') }}
+                    </td>
+                    <td>
+                        <a href="/admin/donations/{{ d.id }}" style="font-size:0.8rem;">Details</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty">
+        <p>No donations yet. They'll appear here once people start donating.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

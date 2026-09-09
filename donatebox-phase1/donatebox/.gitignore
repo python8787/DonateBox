@@ -1,0 +1,62 @@
+# ─── Environment & Secrets ─────────────────
+.env
+.env.local
+.env.production
+*.pem
+*.key
+
+# ─── Python ────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ─── Flutter / Dart ────────────────────────
+mobile/donatebox/.dart_tool/
+mobile/donatebox/.packages
+mobile/donatebox/.pub/
+mobile/donatebox/build/
+mobile/donatebox/.flutter-plugins
+mobile/donatebox/.flutter-plugins-dependencies
+mobile/donatebox/.metadata
+*.iml
+
+# ─── IDE ───────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ─── Docker ────────────────────────────────
+docker-compose.override.yml
+
+# ─── Node (if admin dashboard uses npm) ────
+node_modules/
+npm-debug.log*
+
+# ─── Database ──────────────────────────────
+*.db
+*.sqlite3
+
+# ─── Logs ──────────────────────────────────
+*.log
+logs/
+
+# ─── OS ────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db

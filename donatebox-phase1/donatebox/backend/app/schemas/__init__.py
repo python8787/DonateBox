@@ -1,0 +1,1 @@
+"""DonateBox - Pydantic Schemas"""

@@ -1,0 +1,95 @@
+{% extends "policy/base.html" %}
+{% block title %}Terms of Service — DonateBox{% endblock %}
+
+{% block content %}
+<h1>Terms of Service</h1>
+<p class="last-updated">Last updated: September 2026 &middot; Version {{ terms_version }}</p>
+
+<p>
+    By using DonateBox ("the app"), you agree to the following terms.
+    DonateBox is a personal donation application operated by {{ recipient }}.
+</p>
+
+<h2>1. Nature of Donations</h2>
+<p>
+    Donations made through DonateBox are <strong>voluntary</strong> contributions.
+    They are not payments for goods or services. By donating, you confirm that
+    you are making a gift of your own free will.
+</p>
+
+<h2>2. Eligibility</h2>
+<ul>
+    <li>You must be at least 18 years old (or the age of majority in your jurisdiction) to make a donation.</li>
+    <li>You must have legal authority to use the payment method you select.</li>
+    <li>You must not use the app for money laundering, fraud, or any illegal purpose.</li>
+</ul>
+
+<h2>3. Donation Limits</h2>
+<p>
+    The app enforces minimum and maximum donation amounts per currency.
+    These limits are configured on the server and displayed in the app before
+    you proceed. Attempting to circumvent these limits is prohibited.
+</p>
+
+<h2>4. Payment Processing</h2>
+<p>
+    Payments are processed by third-party gateways (Razorpay for INR, Stripe
+    for USD). By initiating a payment, you also agree to the respective
+    gateway's terms of service. We verify every payment server-side and do not
+    rely on client-side confirmation alone.
+</p>
+
+<h2>5. Refunds</h2>
+<p>
+    Please see our <a href="/policy/refund">Refund Policy</a> for details on
+    when and how refunds may be issued.
+</p>
+
+<h2>6. No Warranties</h2>
+<p>
+    DonateBox is provided "as is" without warranties of any kind. We make
+    reasonable efforts to keep the service available and secure, but we do not
+    guarantee uninterrupted or error-free operation.
+</p>
+
+<h2>7. Limitation of Liability</h2>
+<p>
+    To the fullest extent permitted by law, {{ recipient }} shall not be liable
+    for any indirect, incidental, or consequential damages arising from your
+    use of DonateBox. Our total liability for any claim shall not exceed the
+    amount of your most recent donation.
+</p>
+
+<h2>8. Acceptable Use</h2>
+<p>You agree not to:</p>
+<ul>
+    <li>Attempt to exploit, hack, or reverse-engineer the application.</li>
+    <li>Submit false or misleading information.</li>
+    <li>Use automated tools to abuse the donation system.</li>
+    <li>Circumvent rate limits or security measures.</li>
+</ul>
+
+<h2>9. Privacy</h2>
+<p>
+    Your use of DonateBox is also governed by our
+    <a href="/policy/privacy">Privacy Policy</a>, which explains how we
+    collect and handle your information.
+</p>
+
+<h2>10. Changes to Terms</h2>
+<p>
+    We may update these terms from time to time. The app will require you to
+    accept the current terms version before making a donation. Continued use
+    after changes constitutes acceptance.
+</p>
+
+<h2>11. Contact</h2>
+<p>
+    Questions about these terms? Contact us at:
+    {% if contact_email %}
+    <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>
+    {% else %}
+    the contact information provided in the app.
+    {% endif %}
+</p>
+{% endblock %}

@@ -6,7 +6,9 @@ Public endpoints for creating donations and getting config.
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request as FastAPIRequest, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -19,6 +21,7 @@ from app.schemas.donation import (
 )
 from app.services.donation_service import DonationService
 
+limiter = Limiter(key_func=get_remote_address)
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/donations", tags=["Donations"])
@@ -56,8 +59,10 @@ async def get_donation_config():
     response_model=DonationResponse,
     status_code=status.HTTP_201_CREATED,
 )
+@limiter.limit("10/minute")
 async def create_donation(
-    request: CreateDonationRequest,
+    request: FastAPIRequest,
+    donation_request: CreateDonationRequest,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -67,7 +72,7 @@ async def create_donation(
     Terms must be accepted. Amount is verified server-side.
     """
     try:
-        donation = await DonationService.create_donation(db, request)
+        donation = await DonationService.create_donation(db, donation_request)
         return DonationResponse(
             id=donation.id,
             status=donation.status,

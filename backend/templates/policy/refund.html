@@ -1,0 +1,71 @@
+{% extends "policy/base.html" %}
+{% block title %}Refund Policy — DonateBox{% endblock %}
+
+{% block content %}
+<h1>Refund &amp; Cancellation Policy</h1>
+<p class="last-updated">Last updated: September 2026</p>
+
+<p>
+    DonateBox is a personal donation application operated by {{ recipient }}.
+    Because donations are voluntary gifts and not purchases, our refund policy
+    differs from a typical e-commerce return policy.
+</p>
+
+<h2>1. General Policy</h2>
+<div class="highlight-box">
+    Donations are generally <strong>non-refundable</strong>. By completing a
+    donation, you acknowledge that you are making a voluntary gift and do not
+    expect goods or services in return.
+</div>
+
+<h2>2. When Refunds May Be Issued</h2>
+<p>We may issue a refund in the following circumstances:</p>
+<ul>
+    <li><strong>Duplicate charges</strong> — if you were charged more than once for the same donation due to a technical error.</li>
+    <li><strong>Incorrect amount</strong> — if the amount charged differs significantly from what you intended due to a system error.</li>
+    <li><strong>Unauthorized transaction</strong> — if you believe a donation was made without your authorization.</li>
+    <li><strong>Payment failure with charge</strong> — if your payment was marked as failed but the amount was deducted from your account.</li>
+</ul>
+
+<h2>3. Refund Process</h2>
+<p>To request a refund:</p>
+<ul>
+    <li>Contact us within <strong>30 days</strong> of the transaction date.</li>
+    <li>Provide your donation details (amount, date, and any transaction reference you have).</li>
+    <li>We will review your request and respond within 5 business days.</li>
+</ul>
+<p>
+    Approved refunds are processed through the original payment method
+    (Razorpay or Stripe). The refund timeline depends on the payment gateway
+    and your bank — typically 5–10 business days.
+</p>
+
+<h2>4. Cancellation</h2>
+<p>
+    DonateBox does not offer recurring subscriptions. Each donation is a
+    one-time transaction. If you initiated a payment but have not completed it,
+    you can simply close the payment window — no charge will be made.
+</p>
+<p>
+    If a payment is in "pending" status for an extended period, it will
+    eventually expire based on the payment gateway's timeout policy. No action
+    is needed from you.
+</p>
+
+<h2>5. Disputes</h2>
+<p>
+    If you dispute a charge with your bank or card issuer, please also contact
+    us so we can help resolve the issue directly. Chargebacks incur fees from
+    payment gateways, and we prefer to resolve issues amicably.
+</p>
+
+<h2>6. Contact</h2>
+<p>
+    For refund requests or questions, contact us at:
+    {% if contact_email %}
+    <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>
+    {% else %}
+    the contact information provided in the app.
+    {% endif %}
+</p>
+{% endblock %}

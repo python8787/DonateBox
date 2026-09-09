@@ -23,6 +23,8 @@
     {% if status_filter or currency %}
     <a href="/admin/donations" class="btn btn-outline">Clear</a>
     {% endif %}
+    <a href="/admin/export/csv{% if status_filter or currency %}?{% endif %}{% if status_filter %}status_filter={{ status_filter }}{% endif %}{% if status_filter and currency %}&{% endif %}{% if currency %}currency={{ currency }}{% endif %}"
+       class="btn btn-outline" style="margin-left:auto;">&#8595; Export CSV</a>
 </form>
 
 <!-- Donations Table -->

@@ -5,11 +5,15 @@ Authentication, dashboard data, and server-rendered admin pages.
 Admin can view/filter — cannot modify payment statuses.
 """
 
+import csv
+import io
 import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from sqlalchemy import func, select, and_, case
@@ -22,6 +26,8 @@ from app.models.payment import Payment
 from app.security.auth import authenticate_admin, create_access_token, verify_token
 
 logger = logging.getLogger(__name__)
+
+limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(tags=["Admin"])
 
@@ -56,14 +62,15 @@ def get_admin_from_cookie(request: Request) -> Optional[str]:
 # --- API endpoint (JSON) ---
 
 @router.post("/api/v1/admin/auth/login", response_model=LoginResponse)
-async def admin_login_api(request: LoginRequest):
+@limiter.limit("5/minute")
+async def admin_login_api(request: Request, login_request: LoginRequest):
     """API login — returns JWT token."""
-    if not authenticate_admin(request.username, request.password):
+    if not authenticate_admin(login_request.username, login_request.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
         )
-    token = create_access_token(request.username)
+    token = create_access_token(login_request.username)
     return LoginResponse(access_token=token)
 
 
@@ -76,13 +83,12 @@ async def admin_login_page(request: Request):
     if admin:
         return RedirectResponse(url="/admin", status_code=302)
     return templates.TemplateResponse(
-        name="admin/login.html",
-        context={"request": request, "error": None},
-        request=request,
+        request, "admin/login.html", {"request": request, "error": None},
     )
 
 
 @router.post("/admin/login", response_class=HTMLResponse)
+@limiter.limit("5/minute")
 async def admin_login_submit(request: Request):
     """Handle login form submission."""
     form = await request.form()
@@ -91,9 +97,7 @@ async def admin_login_submit(request: Request):
 
     if not authenticate_admin(username, password):
         return templates.TemplateResponse(
-            name="admin/login.html",
-            context={"request": request, "error": "Invalid username or password"},
-            request=request,
+            request, "admin/login.html", {"request": request, "error": "Invalid username or password"},
         )
 
     token = create_access_token(username)
@@ -129,9 +133,7 @@ async def admin_dashboard(
     stats = await _get_statistics(db)
 
     return templates.TemplateResponse(
-        name="admin/dashboard.html",
-        context={"request": request, "admin": admin, "stats": stats},
-        request=request,
+        request, "admin/dashboard.html", {"request": request, "admin": admin, "stats": stats},
     )
 
 
@@ -173,8 +175,7 @@ async def admin_donations_page(
     donations = result.scalars().all()
 
     return templates.TemplateResponse(
-        name="admin/donations.html",
-        context={
+        request, "admin/donations.html", {
             "request": request,
             "admin": admin,
             "donations": donations,
@@ -184,7 +185,6 @@ async def admin_donations_page(
             "total_pages": total_pages,
             "total": total,
         },
-        request=request,
     )
 
 
@@ -215,9 +215,59 @@ async def admin_donation_detail(
     payments = payments_result.scalars().all()
 
     return templates.TemplateResponse(
-        name="admin/donation_detail.html",
-        context={"request": request, "admin": admin, "donation": donation, "payments": payments},
-        request=request,
+        request, "admin/donation_detail.html",
+        {"request": request, "admin": admin, "donation": donation, "payments": payments},
+    )
+
+
+@router.get("/admin/export/csv")
+async def admin_export_csv(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    status_filter: Optional[str] = None,
+    currency: Optional[str] = None,
+):
+    """Export donations as CSV (same filters as the donations page)."""
+    admin = get_admin_from_cookie(request)
+    if not admin:
+        return RedirectResponse(url="/admin/login", status_code=302)
+
+    query = select(Donation).order_by(Donation.created_at.desc())
+    filters = []
+    if status_filter:
+        filters.append(Donation.status == status_filter)
+    if currency:
+        filters.append(Donation.currency == currency)
+    if filters:
+        query = query.where(and_(*filters))
+
+    result = await db.execute(query)
+    donations = result.scalars().all()
+
+    # Build CSV in memory
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "ID", "Donor Name", "Amount", "Currency", "Status",
+        "Payment Provider", "Created At", "Paid At",
+    ])
+    for d in donations:
+        writer.writerow([
+            str(d.id),
+            d.donor_name or "Anonymous",
+            f"{d.amount:.2f}",
+            d.currency,
+            d.status,
+            d.payment_provider or "",
+            d.created_at.strftime("%Y-%m-%d %H:%M:%S") if d.created_at else "",
+            d.paid_at.strftime("%Y-%m-%d %H:%M:%S") if d.paid_at else "",
+        ])
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=donatebox_donations.csv"},
     )
 
 

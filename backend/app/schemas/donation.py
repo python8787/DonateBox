@@ -4,6 +4,7 @@ DonateBox - Donation Schemas
 Pydantic models for request/response validation.
 """
 
+import re
 from datetime import datetime
 from typing import Optional, List
 from uuid import UUID
@@ -52,6 +53,9 @@ class CreateDonationRequest(BaseModel):
     @classmethod
     def clean_name(cls, v: Optional[str]) -> Optional[str]:
         if v is not None:
+            v = v.strip()
+            # Strip HTML tags to prevent XSS
+            v = re.sub(r"<[^>]*>", "", v)
             v = v.strip()
             if len(v) == 0:
                 return None

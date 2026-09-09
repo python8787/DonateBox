@@ -2,21 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_theme.dart';
 import '../config/app_config.dart';
-import '../models/donation_config.dart';
-import '../models/donation.dart';
 import '../services/api_service.dart';
-import '../services/payment_client_service.dart';
 import '../widgets/glassmorphic_card.dart';
 import '../widgets/amount_selector.dart';
 import '../widgets/donation_dialog.dart';
-import 'thank_you_screen.dart';
-import 'payment_failed_screen.dart';
-import 'processing_screen.dart';
 
 /// Home screen — the core donation experience.
 ///
-/// Loads config from backend on init. Falls back to hardcoded
-/// defaults if the server is unreachable (offline-friendly).
+/// Minimal layout: name input + amount selector + currency toggle + Donate button.
+/// Amount config would normally come from the backend; using defaults until connected.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -29,12 +23,9 @@ class _HomeScreenState extends State<HomeScreen> {
   String _selectedCurrency = 'INR';
   double? _selectedAmount;
   bool _isLoading = false;
-  bool _configLoading = true;
-  String? _configError;
-  DonationConfig? _serverConfig;
 
-  // Default config — used as fallback when backend is unreachable
-  static final Map<String, _CurrencyPreset> _defaultPresets = {
+  // Default config — replaced by backend config in Phase 3+
+  final Map<String, _CurrencyPreset> _presets = {
     'INR': _CurrencyPreset(
       symbol: '₹',
       presets: [50, 100, 500, 1000],
@@ -49,28 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
   };
 
-  String get _termsVersion => _serverConfig?.termsVersion ?? '1.0';
-
-  _CurrencyPreset get _currentPreset {
-    if (_serverConfig != null) {
-      final config = _serverConfig!.getConfig(_selectedCurrency);
-      if (config != null) {
-        return _CurrencyPreset(
-          symbol: _selectedCurrency == 'INR' ? '₹' : '\$',
-          presets: config.presets,
-          min: config.minAmount,
-          max: config.maxAmount,
-        );
-      }
-    }
-    return _defaultPresets[_selectedCurrency]!;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadConfig();
-  }
+  _CurrencyPreset get _currentPreset => _presets[_selectedCurrency]!;
 
   @override
   void dispose() {
@@ -78,53 +48,44 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  Future<void> _loadConfig() async {
-    setState(() {
-      _configLoading = true;
-      _configError = null;
-    });
-
-    try {
-      final config = await ApiService.getDonationConfig();
-      if (mounted) {
-        setState(() {
-          _serverConfig = config;
-          _configLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _configLoading = false;
-          _configError = 'Using offline mode — server unreachable';
-        });
-      }
-    }
-  }
-
   void _onCurrencyChanged(String currency) {
     setState(() {
       _selectedCurrency = currency;
-      _selectedAmount = null;
+      _selectedAmount = null; // Reset amount on currency change
     });
   }
 
   void _onDonatePressed() {
     if (_selectedAmount == null) {
-      _showSnackBar('Please select or enter a donation amount', isError: true);
-      return;
-    }
-
-    final preset = _currentPreset;
-    if (_selectedAmount! < preset.min || _selectedAmount! > preset.max) {
-      _showSnackBar(
-        'Amount must be between ${preset.symbol}${preset.min.toStringAsFixed(0)} '
-        'and ${preset.symbol}${preset.max.toStringAsFixed(0)}',
-        isError: true,
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please select or enter a donation amount'),
+          backgroundColor: AppTheme.errorRed.withValues(alpha: 0.9),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       );
       return;
     }
 
+    // Validate amount
+    if (_selectedAmount! < _currentPreset.min ||
+        _selectedAmount! > _currentPreset.max) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Amount must be between ${_currentPreset.symbol}${_currentPreset.min.toStringAsFixed(0)} '
+            'and ${_currentPreset.symbol}${_currentPreset.max.toStringAsFixed(0)}',
+          ),
+          backgroundColor: AppTheme.errorRed.withValues(alpha: 0.9),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+
+    // Show confirmation dialog
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -132,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
         amount: _selectedAmount!,
         currency: _selectedCurrency,
         currencySymbol: _currentPreset.symbol,
-        termsVersion: _termsVersion,
+        termsVersion: '1.0', // Will come from backend config
         onProceed: () {
           Navigator.of(context).pop();
           _processDonation();
@@ -142,153 +103,65 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _processDonation() async {
-    final amount = _selectedAmount!;
-    final currency = _selectedCurrency;
-    final symbol = _currentPreset.symbol;
-    final name = _nameController.text.trim().isEmpty
-        ? null
-        : _nameController.text.trim();
-
     setState(() => _isLoading = true);
 
-    // Navigate to processing screen
-    if (mounted) {
-      Navigator.of(context).push(
-        PageRouteBuilder(
-          pageBuilder: (_, __, ___) => ProcessingScreen(
-            amount: amount,
-            currencySymbol: symbol,
-            currency: currency,
-          ),
-          transitionsBuilder: (_, animation, __, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-          transitionDuration: const Duration(milliseconds: 300),
-        ),
-      );
-    }
-
     try {
-      // Step 1: Create donation on backend
-      final donationData = await ApiService.createDonation(
-        name: name,
-        amount: amount,
-        currency: currency,
-        termsVersion: _termsVersion,
+      // 1. Create donation on backend
+      final donationResult = await ApiService.createDonation(
+        name: _nameController.text.trim().isNotEmpty
+            ? _nameController.text.trim()
+            : null,
+        amount: _selectedAmount!,
+        currency: _selectedCurrency,
+        termsVersion: '1.0', // Will come from backend config
       );
-      final donation = Donation.fromJson(donationData);
 
-      // Step 2: Create payment order on backend
-      final paymentData = await ApiService.createPayment(
-        donationId: donation.id,
+      if (!mounted) return;
+
+      // 2. Navigate to thank-you (payment gateway integration in Phase 4)
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => _ThankYouPlaceholder(
+            amount: _selectedAmount!,
+            symbol: _currentPreset.symbol,
+            currency: _selectedCurrency,
+          ),
+        ),
       );
-      final paymentInit = PaymentInitData.fromJson(paymentData);
-
-      // Step 3: Launch native payment UI (Razorpay or Stripe)
-      final paymentResult = await PaymentClientService.launchPayment(paymentInit);
-
-      if (paymentResult.success) {
-        // Step 4: Verify payment on backend (NEVER trust client)
-        final verifyResult = await ApiService.verifyPayment(
-          donationId: donation.id,
-          paymentData: paymentResult.data,
-        );
-
-        final verified = verifyResult['status'] == 'SUCCESS';
-
-        if (verified && mounted) {
-          Navigator.of(context).pushAndRemoveUntil(
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => ThankYouScreen(
-                amount: amount,
-                currencySymbol: symbol,
-                currency: currency,
-                donorName: name,
-                donationId: donation.id,
-              ),
-              transitionsBuilder: (_, animation, __, child) {
-                return FadeTransition(opacity: animation, child: child);
-              },
-              transitionDuration: const Duration(milliseconds: 400),
-            ),
-            (route) => route.isFirst,
-          );
-        } else if (mounted) {
-          // Server says payment didn't verify
-          _navigateToFailed(
-            amount: amount,
-            symbol: symbol,
-            currency: currency,
-            message: verifyResult['message'] ?? 'Payment verification failed',
-            wasCancelled: false,
-          );
-        }
-      } else {
-        // Payment was cancelled or failed at gateway
-        if (mounted) {
-          _navigateToFailed(
-            amount: amount,
-            symbol: symbol,
-            currency: currency,
-            message: paymentResult.error ?? 'Payment failed',
-            wasCancelled: paymentResult.wasCancelled,
-          );
-        }
-      }
+    } on RateLimitException catch (e) {
+      _showErrorSnackBar(e.message);
+    } on NetworkException catch (e) {
+      _showErrorSnackBar(e.message);
+    } on ApiTimeoutException catch (e) {
+      _showErrorSnackBar(e.message);
+    } on ServerException catch (e) {
+      _showErrorSnackBar(e.message);
+    } on ValidationException catch (e) {
+      _showErrorSnackBar(e.message);
+    } on ApiException catch (e) {
+      _showErrorSnackBar(e.message);
     } catch (e) {
-      if (mounted) {
-        _navigateToFailed(
-          amount: amount,
-          symbol: symbol,
-          currency: currency,
-          message: e.toString().replaceAll('Exception: ', ''),
-          wasCancelled: false,
-        );
-      }
+      _showErrorSnackBar('Something went wrong. Please try again.');
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _navigateToFailed({
-    required double amount,
-    required String symbol,
-    required String currency,
-    required String message,
-    required bool wasCancelled,
-  }) {
-    Navigator.of(context).pushAndRemoveUntil(
-      PageRouteBuilder(
-        pageBuilder: (_, __, ___) => PaymentFailedScreen(
-          amount: amount,
-          currencySymbol: symbol,
-          currency: currency,
-          errorMessage: message,
-          wasCancelled: wasCancelled,
-          onRetry: () {
-            Navigator.of(context).popUntil((route) => route.isFirst);
-          },
-        ),
-        transitionsBuilder: (_, animation, __, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 300),
-      ),
-      (route) => route.isFirst,
-    );
-  }
-
-  void _showSnackBar(String message, {bool isError = false}) {
+  void _showErrorSnackBar(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: isError
-            ? AppTheme.errorRed.withValues(alpha: 0.9)
-            : AppTheme.successGreen.withValues(alpha: 0.9),
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: AppTheme.errorRed.withValues(alpha: 0.9),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 4),
       ),
     );
   }
@@ -316,60 +189,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 const SizedBox(height: AppTheme.spacingSm),
 
-                Text(
-                  _serverConfig?.recipientName != null
-                      ? 'Support ${_serverConfig!.recipientName}'
-                      : 'Make a difference, one donation at a time',
-                  style: const TextStyle(
+                const Text(
+                  'Make a difference, one donation at a time',
+                  style: TextStyle(
                     color: AppTheme.textMuted,
                     fontSize: 14,
                   ),
                   textAlign: TextAlign.center,
                 ).animate(delay: 100.ms).fadeIn(duration: 400.ms),
-
-                // Server status indicator
-                if (_configError != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: AppTheme.spacingSm),
-                    child: GestureDetector(
-                      onTap: _loadConfig,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: AppTheme.warningAmber,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            '$_configError  (tap to retry)',
-                            style: const TextStyle(
-                              color: AppTheme.warningAmber,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                if (_configLoading)
-                  const Padding(
-                    padding: EdgeInsets.only(top: AppTheme.spacingSm),
-                    child: SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppTheme.accentTeal,
-                      ),
-                    ),
-                  ),
 
                 const SizedBox(height: AppTheme.spacingXl),
 
@@ -565,17 +392,103 @@ class _CurrencyToggle extends StatelessWidget {
   }
 }
 
-/// Currency preset configuration
-class _CurrencyPreset {
+/// Placeholder thank you screen — replaced with proper screen in Phase 2
+class _ThankYouPlaceholder extends StatelessWidget {
+  final double amount;
   final String symbol;
-  final List<int> presets;
-  final double min;
-  final double max;
+  final String currency;
 
-  _CurrencyPreset({
+  const _ThankYouPlaceholder({
+    required this.amount,
     required this.symbol,
-    required this.presets,
-    required this.min,
-    required this.max,
+    required this.currency,
   });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
+        child: Center(
+          child: GlassmorphicCard(
+            margin: const EdgeInsets.all(AppTheme.spacingLg),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [
+                        AppTheme.successGreen,
+                        AppTheme.successGreen.withValues(alpha: 0.7),
+                      ],
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.check_rounded,
+                    size: 40,
+                    color: Colors.white,
+                  ),
+                )
+                    .animate()
+                    .scale(
+                      begin: const Offset(0, 0),
+                      end: const Offset(1, 1),
+                      duration: 500.ms,
+                      curve: Curves.elasticOut,
+                    ),
+                const SizedBox(height: AppTheme.spacingLg),
+                Text(
+                  'Thank You!',
+                  style: Theme.of(context).textTheme.displayMedium,
+                ),
+                const SizedBox(height: AppTheme.spacingSm),
+                Text(
+                  'Your donation of $symbol${amount.toStringAsFixed(2)} $currency\n'
+                  'has been received.',
+                  style: const TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 16,
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppTheme.spacingXl),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).popUntil((route) => route.isFirst);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.glassWhite,
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppTheme.radiusMedium),
+                        side: const BorderSide(color: AppTheme.glassBorder),
+                      ),
+                    ),
+                    child: const Text(
+                      'Done',
+                      style: TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

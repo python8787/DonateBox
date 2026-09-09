@@ -1,0 +1,87 @@
+{% extends "policy/base.html" %}
+{% block title %}Privacy Policy — DonateBox{% endblock %}
+
+{% block content %}
+<h1>Privacy Policy</h1>
+<p class="last-updated">Last updated: September 2026</p>
+
+<p>
+    DonateBox ("we", "us", or "the app") is a personal donation application
+    operated by {{ recipient }}. We are committed to protecting your privacy.
+    This policy explains what information we collect, how we use it, and your
+    rights regarding that information.
+</p>
+
+<h2>1. Information We Collect</h2>
+<p>When you make a donation through DonateBox, we may collect:</p>
+<ul>
+    <li><strong>Name</strong> — only if you choose to provide it; donations can be made anonymously.</li>
+    <li><strong>Donation amount and currency</strong> — to process your payment.</li>
+    <li><strong>Payment reference IDs</strong> — transaction identifiers from the payment gateway (Razorpay or Stripe). We do <strong>not</strong> store your card number, UPI PIN, bank account details, or any other payment credentials.</li>
+    <li><strong>Device and IP metadata</strong> — standard request headers and IP addresses for rate limiting and security purposes.</li>
+</ul>
+
+<h2>2. How We Use Your Information</h2>
+<ul>
+    <li>To process and verify your donation payment.</li>
+    <li>To display donation records in our internal admin dashboard (accessible only to the app administrator).</li>
+    <li>To comply with applicable financial regulations and tax requirements.</li>
+    <li>To protect against abuse, fraud, and security threats.</li>
+</ul>
+
+<h2>3. Payment Processing</h2>
+<p>
+    Payments are processed securely by third-party gateways:
+    <strong>Razorpay</strong> (for INR donations) and <strong>Stripe</strong>
+    (for USD donations). Your payment credentials are handled entirely by these
+    providers — they never pass through or are stored on our servers.
+</p>
+<div class="highlight-box">
+    We never see, store, or have access to your card numbers, CVV, UPI PIN,
+    or bank login credentials. All payment data is handled directly by the
+    payment gateway's secure, PCI-DSS compliant infrastructure.
+</div>
+
+<h2>4. Data Retention</h2>
+<p>
+    Donation records (name if provided, amount, status, and payment reference)
+    are retained indefinitely for accounting and compliance purposes. You may
+    request deletion of your personal information by contacting us.
+</p>
+
+<h2>5. Data Sharing</h2>
+<p>
+    We do <strong>not</strong> sell, rent, or share your personal information
+    with any third parties, except:
+</p>
+<ul>
+    <li>Payment gateways (Razorpay / Stripe) for processing your transaction.</li>
+    <li>When required by law, regulation, or legal process.</li>
+</ul>
+
+<h2>6. Security</h2>
+<p>
+    We take reasonable measures to protect your information, including HTTPS
+    encryption for all communications, server-side payment verification,
+    webhook signature validation, rate limiting, and secure admin
+    authentication.
+</p>
+
+<h2>7. Your Rights</h2>
+<p>You may:</p>
+<ul>
+    <li>Request access to your donation records.</li>
+    <li>Request correction or deletion of your personal data.</li>
+    <li>Make donations anonymously without providing a name.</li>
+</ul>
+
+<h2>8. Contact</h2>
+<p>
+    For any privacy-related questions or requests, contact us at:
+    {% if contact_email %}
+    <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>
+    {% else %}
+    the contact information provided in the app.
+    {% endif %}
+</p>
+{% endblock %}

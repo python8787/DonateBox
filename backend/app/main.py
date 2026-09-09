@@ -8,8 +8,9 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -17,12 +18,13 @@ from slowapi.util import get_remote_address
 
 from app.config import settings
 from app.database import create_tables
-from app.api import health, donations, payments, webhooks, admin
+from app.logging_config import setup_logging
+from app.api import health, donations, payments, webhooks, admin, policies
 
-# Configure logging
-logging.basicConfig(
-    level=logging.DEBUG if settings.debug else logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+# Configure structured logging
+setup_logging(
+    debug=settings.debug,
+    json_logs=not settings.is_development,  # JSON in production, colored in dev
 )
 logger = logging.getLogger(__name__)
 
@@ -68,8 +70,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 # Static files for admin dashboard (only if directory exists)
@@ -85,6 +87,27 @@ app.include_router(webhooks.router, prefix="/api/v1")
 
 # Admin dashboard — mounted at root (serves /admin/* HTML pages + /api/v1/admin/* JSON)
 app.include_router(admin.router)
+
+# Public policy pages — /policy/privacy, /policy/terms, /policy/refund
+app.include_router(policies.router)
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Catch unhandled exceptions — never expose stack traces in production."""
+    logger.error(
+        f"Unhandled exception: {exc}",
+        extra={"method": request.method, "path": request.url.path, "status_code": 500},
+        exc_info=exc,
+    )
+    if settings.is_development:
+        detail = str(exc)
+    else:
+        detail = "An internal error occurred. Please try again later."
+    return JSONResponse(
+        status_code=500,
+        content={"detail": detail},
+    )
 
 
 @app.get("/")

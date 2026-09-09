@@ -1,5 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../config/app_config.dart';
 import '../theme/app_theme.dart';
 
 /// Donation confirmation dialog with terms and mandatory checkbox.
@@ -121,8 +123,11 @@ class _DonationConfirmDialogState extends State<DonationConfirmDialog> {
                         Padding(
                           padding: const EdgeInsets.only(bottom: 8),
                           child: GestureDetector(
-                            onTap: () {
-                              // TODO: Open rules and policies page
+                            onTap: () async {
+                              final url = Uri.parse(AppConfig.termsOfServiceUrl);
+                              if (await canLaunchUrl(url)) {
+                                await launchUrl(url, mode: LaunchMode.externalApplication);
+                              }
                             },
                             child: const Text(
                               'I have read and agree to the Rules and Policies.',

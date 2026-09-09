@@ -10,7 +10,9 @@ import logging
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request as FastAPIRequest, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -23,6 +25,7 @@ from app.schemas.payment import (
 from app.services.donation_service import DonationService
 from app.services.payment_service import PaymentRouter
 
+limiter = Limiter(key_func=get_remote_address)
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Payments"])
@@ -32,7 +35,9 @@ router = APIRouter(tags=["Payments"])
     "/donations/{donation_id}/payment",
     response_model=PaymentInitResponse,
 )
+@limiter.limit("10/minute")
 async def create_payment(
+    request: FastAPIRequest,
     donation_id: UUID,
     db: AsyncSession = Depends(get_db),
 ):
@@ -114,8 +119,10 @@ async def create_payment(
     "/payments/verify",
     response_model=PaymentVerifyResponse,
 )
+@limiter.limit("10/minute")
 async def verify_payment(
-    request: VerifyPaymentRequest,
+    request: FastAPIRequest,
+    verify_request: VerifyPaymentRequest,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -130,7 +137,7 @@ async def verify_payment(
     3. Updates both payment and donation records
     """
     # Get donation
-    donation = await DonationService.get_donation(db, request.donation_id)
+    donation = await DonationService.get_donation(db, verify_request.donation_id)
     if not donation:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -148,7 +155,7 @@ async def verify_payment(
 
     # Verify with the gateway
     try:
-        result = await provider.verify_payment(request.payment_data)
+        result = await provider.verify_payment(verify_request.payment_data)
     except Exception as e:
         logger.error(f"Payment verification error: {e}")
         raise HTTPException(

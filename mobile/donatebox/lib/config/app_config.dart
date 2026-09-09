@@ -26,4 +26,9 @@ class AppConfig {
 
   // Input limits
   static const int maxNameLength = 100;
+
+  // Policy URLs (served by backend)
+  static const String privacyPolicyUrl = 'http://10.0.2.2:8000/policy/privacy';
+  static const String termsOfServiceUrl = 'http://10.0.2.2:8000/policy/terms';
+  static const String refundPolicyUrl = 'http://10.0.2.2:8000/policy/refund';
 }

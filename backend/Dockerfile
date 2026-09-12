@@ -14,9 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install Python dependencies
 COPY requirements.txt .
-# setuptools must be installed FIRST — razorpay uses pkg_resources at install time
-RUN pip install --no-cache-dir setuptools>=75.0.0 && \
-    pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .

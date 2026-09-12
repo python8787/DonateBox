@@ -1,0 +1,85 @@
+# DonateBox - Render Blueprint
+# Deploy with: Connect repo on Render dashboard, it auto-detects this file.
+# Or use `render blueprint apply` CLI.
+
+services:
+  - type: web
+    name: donatebox-api
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    plan: free
+    region: singapore  # Closest to India for low latency
+    healthCheckPath: /api/v1/health
+    envVars:
+      # App
+      - key: APP_ENV
+        value: production
+      - key: APP_NAME
+        value: DonateBox
+      - key: APP_VERSION
+        value: 1.0.0
+      - key: DEBUG
+        value: "false"
+
+      # Database — set this to your Neon/Supabase PostgreSQL URL
+      - key: DATABASE_URL
+        sync: false  # Must be set manually (contains credentials)
+
+      # Razorpay — set your production keys
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+
+      # Stripe — set your production keys
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+
+      # Admin
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD_HASH
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true  # Render auto-generates a random secret
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_EXPIRY_HOURS
+        value: "24"
+
+      # Donation config
+      - key: TERMS_VERSION
+        value: "1.0"
+      - key: INR_MIN_AMOUNT
+        value: "1"
+      - key: INR_MAX_AMOUNT
+        value: "10000"
+      - key: INR_PRESETS
+        value: "50,100,500,1000"
+      - key: USD_MIN_AMOUNT
+        value: "1"
+      - key: USD_MAX_AMOUNT
+        value: "500"
+      - key: USD_PRESETS
+        value: "5,10,25,50"
+
+      # Recipient
+      - key: RECIPIENT_NAME
+        value: Vignesh
+      - key: CONTACT_EMAIL
+        sync: false
+
+      # CORS — update with your actual app domain
+      - key: CORS_ORIGINS
+        value: "*"
+
+      # Rate Limiting
+      - key: RATE_LIMIT
+        value: "100/minute"

@@ -36,13 +36,12 @@ async def lifespan(app: FastAPI):
     logger.info(f"Environment: {settings.app_env}")
     logger.info(f"Debug: {settings.debug}")
 
-    # Auto-create tables in development (use Alembic in production)
-    if settings.is_development:
-        try:
-            await create_tables()
-            logger.info("Database tables created/verified")
-        except Exception as e:
-            logger.warning(f"Could not create tables (DB may be unavailable): {e}")
+    # Auto-create tables (safe for both dev and production — idempotent)
+    try:
+        await create_tables()
+        logger.info("Database tables created/verified")
+    except Exception as e:
+        logger.warning(f"Could not create tables (DB may be unavailable): {e}")
 
     yield
     logger.info(f"Shutting down {settings.app_name}")
